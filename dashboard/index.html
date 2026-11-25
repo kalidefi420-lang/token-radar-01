@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Token Launch Radar — Pre-Token Protocols Ranked by Implied Launch Value</title>
+<meta name="description" content="A radar ranking every DefiLlama protocol that still has no token by what its launch could be worth, with a farm plan for each. Model estimates, not financial advice.">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="radar-dot" aria-hidden="true"></span>
+    <div>
+      <h1>Token Launch Radar</h1>
+      <p class="sub">Pre-token protocols, ranked by implied launch value</p>
+    </div>
+  </div>
+  <div class="top-meta">
+    <span id="snapshotLabel" class="pill">snapshot…</span>
+    <span class="pill warn">Model estimates — not financial advice. A token may never launch.</span>
+  </div>
+</header>
+
+<section class="kpis" id="kpis" aria-label="Board summary"></section>
+
+<main>
+  <section class="controls" aria-label="Filters">
+    <input id="q" type="search" placeholder="Search protocol, category or chain…" aria-label="Search">
+    <select id="fCategory" aria-label="Filter by category"><option value="">All categories</option></select>
+    <select id="fChain" aria-label="Filter by chain"><option value="">All chains</option></select>
+    <select id="fConf" aria-label="Filter by confidence">
+      <option value="">Any confidence</option>
+      <option value="high">High confidence</option>
+      <option value="medium">Medium+</option>
+      <option value="low">Low only</option>
+    </select>
+    <label class="check"><input type="checkbox" id="fWatch"> Watchlist only</label>
+    <label class="check"><input type="checkbox" id="fMine"> My watchlist</label>
+    <select id="sort" aria-label="Sort board">
+      <option value="expected">Sort: expected value</option>
+      <option value="implied">Sort: implied value</option>
+      <option value="tvl">Sort: TVL</option>
+      <option value="odds">Sort: launch odds</option>
+      <option value="score">Sort: radar score</option>
+      <option value="growth">Sort: 7-day growth</option>
+      <option value="age">Sort: oldest first</option>
+    </select>
+    <button id="resetBtn" class="btn ghost" type="button">Reset</button>
+  </section>
+
+  <p class="resultline"><span id="resultCount"></span> <span id="activeFilters"></span></p>
+
+  <section class="tablewrap">
+    <table id="board">
+      <thead><tr>
+        <th>#</th><th>Protocol</th><th>Category</th><th>Chain</th>
+        <th class="num">TVL</th><th class="num">Implied value</th>
+        <th class="num">Launch odds</th><th class="num">Expected value</th>
+        <th class="num">Score</th><th></th>
+      </tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <p id="empty" class="empty" hidden>No protocols match these filters. Loosen a filter or clear the search.</p>
+  </section>
+
+  <section class="panels">
+    <div class="panel" id="methodPanel">
+      <h2>How the radar prices a launch</h2>
+      <div id="methodBody"></div>
+      <p class="fine">Priced on every run from the snapshot's own figures — no hardcoded
+      names or values. Implied value = TVL × the category's median mcap/TVL
+      among protocols that already trade, shrunk toward the global median.
+      A log-log comps curve is fitted on the same traders as a validation
+      cross-check and reported in the board. Launch odds: the empirical token
+      rate of dated protocols in the same age bucket, shrunk by category.
+      Expected value = implied value × launch odds.</p>
+    </div>
+    <div class="panel" id="auditPanel">
+      <h2>What the board leaves out — and why</h2>
+      <div id="auditBody"></div>
+      <p class="fine">Full list with one reason per protocol: <code>excluded.json</code>
+      (written by <code>main.ts</code> next to <code>board.json</code>).</p>
+    </div>
+  </section>
+</main>
+
+<aside id="drawer" class="drawer" aria-hidden="true" aria-label="Protocol detail">
+  <button id="drawerClose" class="btn ghost" type="button">✕ Close</button>
+  <div id="detail"></div>
+</aside>
+<div id="scrim" class="scrim" hidden></div>
+
+<footer>
+  <p>Source: DefiLlama public protocol snapshot (<span id="footSource"></span>). Built by
+  <code>main.ts</code> (Node 22, no dependencies) for make.fun bounty
+  <a href="https://make.fun/bounty/token-radar-01">token-radar-01</a>.
+  Implied / expected values are model estimates, not prices and not a prediction
+  that a token will launch.</p>
+</footer>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
