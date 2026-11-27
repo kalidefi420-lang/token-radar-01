@@ -6,7 +6,7 @@
   var boardEl = document.getElementById("rows");
   var emptyEl = document.getElementById("empty");
   if (!BOARD || !Array.isArray(BOARD.rows)) {
-    boardEl.innerHTML = '<tr><td colspan="10">Board data did not load. Open this folder with its data.js beside index.html, or re-run <code>node main.ts</code>.</td></tr>';
+    boardEl.innerHTML = '<tr><td colspan="10">Board data did not load. This page reads <code>../data.js</code> — open it from <code>out/dashboard/</code>, or re-run <code>node main.ts</code>.</td></tr>';
     return;
   }
   var rows = BOARD.rows;
@@ -53,8 +53,13 @@
   var m = BOARD.methodology;
   $("methodBody").innerHTML =
     "<dl class='method'>" +
+    "<dt>Pricing form</dt><dd><b>" + esc(m.pricing_form || "—") + "</b> — leave-one-out winner on this snapshot</dd>" +
+    "<dt>Leave-one-out</dt><dd>" + (m.pricing_loo || []).map(function (l) {
+      return esc(l.name) + ": " + l.median_abs_log_error + " (" + l.within_2x + "% within 2×)";
+    }).join(" · ") + "</dd>" +
     "<dt>Comps curve</dt><dd><code>" + esc(m.comps_fit) + "</code> · R² " + m.comps_r2 + " · n=" + m.comps_n + "</dd>" +
     "<dt>Global median</dt><dd>" + m.global_median_mcap_tvl + "× mcap / TVL</dd>" +
+    "<dt>Factors</dt><dd>growth ×" + (m.growth_weight || 0) + " · maturity " + (m.maturity_floor || 0) + "–1.0 over " + (m.maturity_days || 0) + "d · breadth +" + Math.round((m.breadth_per_chain || 0) * 100) + "% / chain (max " + (m.breadth_max_chains || 0) + ")</dd>" +
     "<dt>Out-of-sample error</dt><dd>median |log error| " + (m.out_of_sample_median_abs_log_error == null ? "n/a" : m.out_of_sample_median_abs_log_error) + " (fit on older half, tested on newer half)</dd>" +
     "<dt>Launch odds by age</dt><dd>" + Object.keys(m.launch_odds_by_age_bucket).map(function (b) {
       var v = m.launch_odds_by_age_bucket[b];
@@ -71,6 +76,26 @@
     "(CEX, chain, bridge), or below the $" + (m.min_tvl_usd / 1e6) + "M TVL minimum.</p>" +
     "<p>Ranked by category: " + Object.keys(byCat).sort(function (a, b) { return byCat[b] - byCat[a]; })
       .slice(0, 8).map(function (c) { return esc(c) + " " + byCat[c]; }).join(" · ") + ".</p>";
+
+  // ---- movers + validation panels -------------------------------------------
+  var movers = rows.filter(function (r) { return r.tvl_7d_change_pct != null; })
+    .sort(function (a, b) { return b.tvl_7d_change_pct - a.tvl_7d_change_pct; }).slice(0, 8);
+  $("moversBody").innerHTML =
+    "<ol class='movers'>" + movers.map(function (r) {
+      return "<li><b>#" + r.rank + " " + esc(r.name) + "</b> <span class='chg'>" +
+        (r.tvl_7d_change_pct >= 0 ? "+" : "") + r.tvl_7d_change_pct + "% / 7d</span> · " +
+        esc(r.category) + " · " + fmtUSD(r.tvl_usd) + " TVL</li>";
+    }).join("") + "</ol>";
+  $("validBody").innerHTML =
+    "<dl class='method'>" + (m.pricing_loo || []).map(function (l) {
+      return "<dt>" + esc(l.name) + "</dt><dd>median |log error| " + l.median_abs_log_error +
+        " · " + l.within_2x + "% within 2× of the true market cap" +
+        (l.name === m.pricing_form ? " · <b>chosen</b>" : "") + "</dd>";
+    }).join("") + "</dl>" +
+    "<p>Chosen form: <b>" + esc(m.pricing_form || "—") + "</b>. " +
+    "A flat multiple overvalues huge protocols (multiples compress with size), " +
+    "so the curve forms exist at all; the median forms win when the snapshot's " +
+    "traders are too few or too noisy for a curve.</p>";
 
   // ---- filters ---------------------------------------------------------------
   var cats = [...new Set(rows.map(function (r) { return r.category; }))].sort();
@@ -160,8 +185,8 @@
       "<h2>" + esc(r.name) + "</h2>" +
       "<p class='meta'>#" + r.rank + " · " + esc(r.category) + " · " + esc(r.chain) +
       " · " + r.chains.length + " chain" + (r.chains.length > 1 ? "s" : "") +
-      (r.url ? " · <a href='" + esc(r.url) + "' target='_blank' rel='noopener'>official site ↗</a>" : "") +
-      (r.twitter ? " · <a href='https://x.com/" + esc(r.twitter) + "' target='_blank' rel='noopener'>@" + esc(r.twitter) + "</a>" : "") + "</p>" +
+      (r.url ? " · " + esc(String(r.url).replace(/^https?:\/\//, "")) : "") +
+      (r.twitter ? " · @" + esc(r.twitter) : "") + "</p>" +
       "<div class='kv'>" +
       "<div><b>" + fmtUSD(r.tvl_usd) + "</b><span>TVL" + (r.tvl_7d_change_pct != null ? " · " + (r.tvl_7d_change_pct >= 0 ? "+" : "") + r.tvl_7d_change_pct + "% / 7d" : "") + "</span></div>" +
       "<div><b>" + fmtUSD(r.implied_value_usd) + "</b><span>Implied launch value</span></div>" +
@@ -176,10 +201,12 @@
         return "<li><b>Step " + s.step + ": " + esc(s.title) + "</b><p>" + esc(s.detail) + "</p>" +
           "<span class='cost'>" + esc(s.cost) + (s.minutes ? " · ~" + s.minutes + " min" : "") + "</span></li>";
       }).join("") + "</ol>" +
-      "<p class='fine'>Model: implied = TVL × category multiple " + r.category_multiple + "× (shrunk toward the global median). " +
-      "Log-log comps fit would imply " + fmtUSD(r.model.fit_implied_usd) + " — reported as a cross-check. " +
-      "Growth bonus +" + Math.round(r.model.growth_bonus * 100) +
-      "%, breadth bonus +" + Math.round(r.model.breadth_bonus * 100) + "% (shown for context; the score follows expected value only).</p>";
+      "<p class='fine'>Model: " + esc(r.model.pricing_form || "—") + " base " + fmtUSD(r.model.base_implied_usd) +
+      " × growth " + r.model.growth_factor + " × maturity " + r.model.maturity_factor +
+      " × breadth " + r.model.breadth_factor + " = implied " + fmtUSD(r.implied_value_usd) +
+      ". Log-log comps fit would imply " + fmtUSD(r.model.curve_implied_usd) +
+      "; category median would imply " + fmtUSD(r.model.median_implied_usd) +
+      " — both reported as cross-checks. Rank follows implied value.</p>";
     $("drawer").classList.add("open");
     $("drawer").setAttribute("aria-hidden", "false");
     $("scrim").hidden = false;

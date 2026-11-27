@@ -69,12 +69,30 @@
       <h2>How the radar prices a launch</h2>
       <div id="methodBody"></div>
       <p class="fine">Priced on every run from the snapshot's own figures — no hardcoded
-      names or values. Implied value = TVL × the category's median mcap/TVL
-      among protocols that already trade, shrunk toward the global median.
-      A log-log comps curve is fitted on the same traders as a validation
-      cross-check and reported in the board. Launch odds: the empirical token
-      rate of dated protocols in the same age bucket, shrunk by category.
-      Expected value = implied value × launch odds.</p>
+      names or values. Four pricing forms are fitted on the protocols that
+      already trade (global median multiple, category median multiple shrunk
+      k=5, log-log curve, curve + shrunk category intercept); leave-one-out
+      picks the winner on this snapshot. The base price is then moved by
+      seven-day TVL growth (×0.5, clamped −60%…+120%), by how long the
+      protocol has run with no token (maturity 0.6…1.0 over 1095 days) and
+      by chain breadth (+3% per extra chain, capped at 4). Rank follows
+      implied value; launch odds are the empirical token rate of dated
+      protocols in the same age bucket, shrunk by category, and expected
+      value = implied value × launch odds.</p>
+    </div>
+    <div class="panel" id="moversPanel">
+      <h2>Movers — fastest TVL growth, last 7 days</h2>
+      <div id="moversBody"></div>
+      <p class="fine">Growth is one of the three factors that move the implied value,
+      so the fastest movers are where the board can change fastest.</p>
+    </div>
+    <div class="panel" id="validPanel">
+      <h2>Validation — is the pricing any good?</h2>
+      <div id="validBody"></div>
+      <p class="fine">Leave-one-out: every trading protocol is priced once with its own
+      market cap hidden, and the median absolute log error is reported per
+      form. The out-of-sample check fits the comps curve on the oldest half
+      of traders and tests it on the newest half.</p>
     </div>
     <div class="panel" id="auditPanel">
       <h2>What the board leaves out — and why</h2>
@@ -94,12 +112,12 @@
 <footer>
   <p>Source: DefiLlama public protocol snapshot (<span id="footSource"></span>). Built by
   <code>main.ts</code> (Node 22, no dependencies) for make.fun bounty
-  <a href="https://make.fun/bounty/token-radar-01">token-radar-01</a>.
+  token-radar-01.
   Implied / expected values are model estimates, not prices and not a prediction
   that a token will launch.</p>
 </footer>
 
-<script src="data.js"></script>
+<script src="../data.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
